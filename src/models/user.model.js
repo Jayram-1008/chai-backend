@@ -55,7 +55,7 @@ userSchema.pre("save", async function(next) {
     // execute this middleware when password is modifing otherwise it will return as same 
     if(! this.isModified("password")) return next() ;
 
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
 });
 
@@ -82,7 +82,7 @@ userSchema.methods.generateAccessToken = function(){
 
 // generate the our refress token secret key 
 userSchema.methods.generateRefreshToken = function(){
-    return Jwt.sign(
+    return Jwt.sign( 
         {
             _id: this._id,
         },
