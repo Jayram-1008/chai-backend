@@ -25,7 +25,7 @@ const app = express();
 
 // Second way to connect the mongoose
 dotenv.config({
-    path: './env'
+    path: './.env'
 })
 
 connectDB()
