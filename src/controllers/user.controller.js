@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 // upload on cloudinary
 import { updloadOnCloudinary } from "../utils/cloudinary.js";
 import { application } from "express";
+import mongoose from 'mongoose';
 
 const generateAccessAndRefreshTokens = async (userId) =>{
     try {
@@ -160,8 +161,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1 //this removes the field from document
             }
         },
         {
@@ -234,6 +235,7 @@ const refreshAccessToken = asyncHandler(async (req, res) =>{
 const changeCurrentPassword = asyncHandler(async (req, res) =>{
     const {oldPassword, newPassword} = req.body
 
+    console.log(oldPassword);
     const user = await User.findById(req.user?._id)
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
@@ -250,6 +252,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) =>{
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+    console.log(req.user);
     return res
     .status(200)
     .json(200, req.user, "current user fetched successfully")
@@ -404,6 +407,64 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
 })
 
+
+const getWatchHistory = asyncHandler(async(req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "video",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField:'owner',
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1,
+
+                                    }
+                                }
+                            ]
+
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner" //it give the first element of an array
+                            }
+                        }
+                    }
+
+                ]
+            }
+        }
+
+    ])
+
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "Watch history fetched sucessfully"
+    ))
+})
+
+
 export {
     registerUser,
     loginUser,
@@ -415,6 +476,6 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-
+    getWatchHistory,
 
 }   
